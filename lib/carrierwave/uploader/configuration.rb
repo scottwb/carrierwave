@@ -8,6 +8,7 @@ module CarrierWave
         class_attribute :_storage, :instance_writer => false
 
         add_config :root
+        add_config :base_path
         add_config :permissions
         add_config :storage_engines
         add_config :s3_access_policy
@@ -37,7 +38,6 @@ module CarrierWave
         add_config :enable_processing
         add_config :ensure_multipart_form
         add_config :delete_tmp_file_after_storage
-        add_config :delete_cache_id_after_storage
         add_config :remove_previously_stored_files_after_update
 
         # fog
@@ -145,13 +145,13 @@ module CarrierWave
             config.store_dir = 'uploads'
             config.cache_dir = 'uploads/tmp'
             config.delete_tmp_file_after_storage = true
-            config.delete_cache_id_after_storage = true
             config.remove_previously_stored_files_after_update = true
             config.ignore_integrity_errors = true
             config.ignore_processing_errors = true
             config.validate_integrity = true
             config.validate_processing = true
             config.root = CarrierWave.root
+            config.base_path = CarrierWave.base_path
             config.enable_processing = true
             config.ensure_multipart_form = true
           end

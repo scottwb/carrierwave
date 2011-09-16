@@ -3,6 +3,8 @@
 This gem provides a simple and extremely flexible way to upload files from Ruby applications.
 It works well with Rack based web applications, such as Ruby on Rails.
 
+[![Build Status](https://secure.travis-ci.org/jnicklas/carrierwave.png)](http://travis-ci.org/jnicklas/carrierwave)
+
 ## Information
 
 * RDoc documentation [available on RubyDoc.info](http://rubydoc.info/gems/carrierwave/frames)
@@ -59,15 +61,14 @@ uploader.retrieve_from_store!('my_file.png')
 ```
 
 CarrierWave gives you a `store` for permanent storage, and a `cache` for
-temporary storage. You can use different stores, at the moment a filesystem
-store, an Amazon S3 store, a Rackspace Cloud Files store, and a store for
-MongoDB's GridFS are bundled.
+temporary storage. You can use different stores, including filesystem
+and cloud storage.
 
 Most of the time you are going to want to use CarrierWave together with an ORM.
 It is quite simple to mount uploaders on columns in your model, so you can
 simply assign files and get going:
 
-### ActiveRecord, Mongoid
+### ActiveRecord
 
 Make sure you are loading CarrierWave after loading your ORM, otherwise you'll
 need to require the relevant extension manually, e.g.:
@@ -90,8 +91,6 @@ class User
 end
 ```
 
-This works the same with all supported ORMs.
-
 Now you can cache files by assigning them to the attribute, they will
 automatically be stored when the record is saved.
 
@@ -102,17 +101,15 @@ u.avatar = File.open('somewhere')
 u.save!
 u.avatar.url # => '/url/to/file.png'
 u.avatar.current_path # => 'path/to/file.png'
+u.avatar_identifier # => 'file.png'
 ```
 
-If using Mongoid, note that embedded documents files aren't saved when parent documents are saved.
-You must explicitly call save on embedded documents in order to save their attached files.
-You can read more about this [here](https://github.com/jnicklas/carrierwave/issues#issue/81)
+### DataMapper, Mongoid, Sequel
 
-### DataMapper, Sequel
-
-Other ORM support has been extracted into separate gems. Learn more:
+Other ORM support has been extracted into separate gems:
 
 * [carrierwave-datamapper](https://github.com/jnicklas/carrierwave-datamapper)
+* [carrierwave-mongoid](https://github.com/jnicklas/carrierwave-mongoid)
 * [carrierwave-sequel](https://github.com/jnicklas/carrierwave-sequel)
 
 There are more extensions listed in [the wiki](https://github.com/jnicklas/carrierwave/wiki)
@@ -175,6 +172,23 @@ contain Russian letters:
 
 Also make sure that allowing non-latin characters won't cause a compatibility issue with a third-party
 plugins or client-side software.
+
+## Setting the content type
+
+If you care about the content type of your files and notice that it's not being set
+as expected, you can configure your uploaders to use `CarrierWave::MimeTypes`.
+This adds a dependency on the [mime-types](http://rubygems.org/gems/mime-types) gem,
+but is recommended when using fog, and fog already has a dependency on mime-types.
+
+``` ruby
+require 'carrierwave/processing/mime_types'
+
+class MyUploader < CarrierWave::Uploader::Base
+  include CarrierWave::MimeTypes
+
+  process :set_content_type
+end
+```
 
 ## Adding versions
 
@@ -478,6 +492,13 @@ of this information.
 config.fog_host = "c000000.cdn.rackspacecloud.com"
 ```
 
+The UK Rackspace Cloud doesn’t have the same auth server as the US Cloud.
+In case you are using Rackspace UK, you have to adjust the Auth URL:
+
+``` ruby
+config.rackspace_auth_url = 'lon.auth.api.rackspacecloud.com'
+```
+
 In your uploader, set the storage to :fog
 
 ``` ruby
@@ -520,38 +541,6 @@ end
 That's it! You can still use the `CarrierWave::Uploader#url` method to return
 the url to the file on Google.
 
-## Using MongoDB's GridFS store
-
-You'll need to configure the database and host to use:
-
-``` ruby
-CarrierWave.configure do |config|
-  config.grid_fs_database = 'my_mongo_database'
-  config.grid_fs_host = 'mongo.example.com'
-end
-```
-
-The defaults are 'carrierwave' and 'localhost'.
-
-And then in your uploader, set the storage to `:grid_fs`:
-
-``` ruby
-class AvatarUploader < CarrierWave::Uploader::Base
-  storage :grid_fs
-end
-```
-
-Since GridFS doesn't make the files available via HTTP, you'll need to stream
-them yourself. In Rails for example, you could use the `send_data` method. You
-can tell CarrierWave the URL you will serve your images from, allowing it to
-generate the correct URL, by setting eg:
-
-``` ruby
-CarrierWave.configure do |config|
-  config.grid_fs_access_url = "/image/show"
-end
-```
-
 ## Using RMagick
 
 If you're uploading images, you'll probably want to manipulate them in some way,
@@ -587,18 +576,6 @@ end
 
 Check out the manipulate! method, which makes it easy for you to write your own
 manipulation methods.
-
-## Using ImageScience
-
-ImageScience works the same way as RMagick.
-
-``` ruby
-class AvatarUploader < CarrierWave::Uploader::Base
-  include CarrierWave::ImageScience
-
-  process :resize_to_fill => [200, 200]
-end
-```
 
 ## Using MiniMagick
 
